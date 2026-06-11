@@ -1,11 +1,26 @@
 import pandas as pd
 
-def load_dataset(path):
+def load_dataset(path, sep=None):
     """
     Charger un dataset CSV
     """
-    df = pd.read_csv(path)
+    if sep is not None:
+        df = pd.read_csv(path, sep=sep)
+    else:
+        df = pd.read_csv(path, sep=None, engine="python")
     return df
+
+def process_age(age):
+    """
+    Traiter l'âge en fonction du nombre de jours
+    """
+    return int(age / 365)
+
+def oneHotEncoding(df):
+    """
+    Appliquer l'encodage one-hot aux variables catégorielles
+    """
+    return pd.get_dummies(df, drop_first=True)
 
 def clean_dataset(df):
     """
@@ -15,7 +30,6 @@ def clean_dataset(df):
     df = df.drop_duplicates()
 
     # Gérer les valeurs manquantes
-    # → stratégie simple mais propre
     for col in df.columns:
         if df[col].dtype in ["float64", "int64"]:
             # Remplacer par la médiane
