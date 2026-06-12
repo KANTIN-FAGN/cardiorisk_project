@@ -18,10 +18,6 @@ ENV/
 # Jupyter Notebooks
 .ipynb_checkpoints/
 
-# Données
-data/processed/
-data/raw/
-
 # Modèles entraînés
 models/*.pkl
 models/*.joblib
