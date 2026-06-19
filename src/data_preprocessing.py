@@ -43,7 +43,7 @@ def process_bmi(df):
 
 def process_ap(df):
     """
-    Traiter la pression artériale systolique
+    Traiter la pression artériale
     """
     initial_rows = len(df)
 
