@@ -1,0 +1,59 @@
+/* CardioRisk — Simple Dark */
+
+html, body, [data-testid="stAppViewContainer"] {
+    background-color: #111318 !important;
+    color: #e2e8f0 !important;
+}
+
+[data-testid="stHeader"] {
+    background-color: #111318 !important;
+}
+
+[data-testid="stSidebar"] {
+    background-color: #0d1117 !important;
+    border-right: 1px solid #21262d !important;
+}
+
+/* Metric cards */
+[data-testid="metric-container"] {
+    background-color: #161b22 !important;
+    border: 1px solid #21262d !important;
+    border-radius: 10px !important;
+    padding: 1.1rem 1.3rem !important;
+}
+
+[data-testid="metric-container"] [data-testid="stMetricLabel"] {
+    color: #8b949e !important;
+    font-size: 0.78rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    color: #f0f6fc !important;
+    font-size: 1.7rem !important;
+    font-weight: 600 !important;
+}
+
+/* Dividers */
+hr {
+    border-color: #21262d !important;
+}
+
+/* Expander */
+[data-testid="stExpander"] {
+    border: 1px solid #21262d !important;
+    border-radius: 8px !important;
+    background: #161b22 !important;
+}
+
+/* Caption */
+[data-testid="stCaptionContainer"] {
+    color: #8b949e !important;
+    font-size: 0.73rem !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #111318; }
+::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
