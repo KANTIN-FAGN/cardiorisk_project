@@ -37,37 +37,74 @@ gdp_df, gender_df, std_df = load_world_data()
 
 st.subheader("Taux de mortalité cardiovasculaire par pays")
 
-year_std = st.slider(
-    "Année",
-    int(std_df["Year"].min()),
-    int(std_df["Year"].max()),
-    int(std_df["Year"].max()),
-    key="slider_map"
-)
+col_ctrl, _ = st.columns([1, 2])
+with col_ctrl:
+    year_std = st.slider(
+        "Année",
+        int(gdp_df["Year"].min()),
+        int(gdp_df["Year"].max()),
+        2019,
+        key="slider_map"
+    )
 
-map_df = std_df[std_df["Year"] == year_std].dropna(subset=["Code", "DeathRate"])
-# Exclure les agrégats régionaux (pas de code ISO à 3 lettres)
-map_df = map_df[map_df["Code"].str.len() == 3]
+# Jointure std + population (depuis gdp_df) pour calculer les décès absolus
+map_base = std_df[std_df["Year"] == year_std][["Code", "Entity", "DeathRate"]]
+pop_year = gdp_df[gdp_df["Year"] == year_std][["Code", "Population"]].dropna(subset=["Population"])
+map_df = map_base.merge(pop_year, on="Code", how="left")
+map_df["TotalDeaths"] = (map_df["DeathRate"] * map_df["Population"] / 100_000).round(0)
 
-fig_map = px.choropleth(
-    map_df,
-    locations="Code",
-    color="DeathRate",
-    hover_name="Entity",
-    color_continuous_scale="Reds",
-    range_color=(map_df["DeathRate"].quantile(0.05), map_df["DeathRate"].quantile(0.95)),
-    labels={"DeathRate": "Décès / 100k"},
-    title=f"Taux de mortalité cardiovasculaire standardisé par âge ({year_std})",
-    template="plotly_dark"
-)
-fig_map.update_layout(
-    height=500,
-    geo=dict(bgcolor="#161b22", showframe=False, showcoastlines=True, coastlinecolor="#30363d"),
-    coloraxis_colorbar=dict(title="Décès<br>/ 100k"),
-    margin=dict(t=40, b=0, l=0, r=0),
-    **LAYOUT
-)
-st.plotly_chart(fig_map, use_container_width=True)
+col_map, col_bar = st.columns([1.6, 1])
+
+with col_map:
+    fig_map = px.choropleth(
+        map_df.dropna(subset=["TotalDeaths"]),
+        locations="Code",
+        color="TotalDeaths",
+        hover_name="Entity",
+        hover_data={"DeathRate": ":.0f", "TotalDeaths": ":,.0f", "Code": False},
+        color_continuous_scale="Reds",
+        range_color=(0, map_df["TotalDeaths"].quantile(0.92)),
+        labels={"TotalDeaths": "Décès totaux", "DeathRate": "Pour 100k"},
+        title=f"Décès cardiovasculaires totaux ({year_std})",
+        template="plotly_dark"
+    )
+    fig_map.update_layout(
+        height=420,
+        geo=dict(bgcolor="#161b22", showframe=False, showcoastlines=True, coastlinecolor="#30363d"),
+        coloraxis_colorbar=dict(title="Décès<br>totaux"),
+        margin=dict(t=40, b=0, l=0, r=0),
+        **LAYOUT
+    )
+    st.plotly_chart(fig_map, use_container_width=True, config={"scrollZoom": False, "doubleClick": False, "displayModeBar": False})
+    st.caption("Décès totaux = taux pour 100k × population. Les pays sans donnée de population apparaissent en gris.")
+
+with col_bar:
+    top_n = map_df.dropna(subset=["TotalDeaths"]).nlargest(15, "TotalDeaths").copy()
+    top_n = top_n.sort_values("TotalDeaths")
+    top_n["label"] = top_n["TotalDeaths"].apply(lambda x: f"{x/1e6:.2f}M" if x >= 1e6 else f"{x/1e3:.0f}k")
+    fig_bar = px.bar(
+        top_n, x="TotalDeaths", y="Entity",
+        orientation="h",
+        text="label",
+        color="TotalDeaths",
+        color_continuous_scale="Reds",
+        custom_data=["label"],
+        labels={"TotalDeaths": "Décès totaux", "Entity": ""},
+        title=f"Top 15 pays ({year_std})",
+        template="plotly_dark"
+    )
+    fig_bar.update_traces(
+        textposition="outside",
+        hovertemplate="<b>%{y}</b><br>%{customdata[0]} décès<extra></extra>"
+    )
+    fig_bar.update_layout(
+        height=420,
+        showlegend=False,
+        coloraxis_showscale=False,
+        margin=dict(t=40, b=0, l=0, r=60),
+        **LAYOUT
+    )
+    st.plotly_chart(fig_bar, use_container_width=True)
 
 st.divider()
 
