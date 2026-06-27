@@ -1,4 +1,7 @@
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy.stats import chi2_contingency
 
 def load_dataset(path, sep=None):
     """
@@ -68,7 +71,7 @@ def delete_columns(df, columns_name):
     """
     return df.drop(columns=[columns_name])
 
-def oneHotEncoding(df):
+def one_hot_encoding(df):
     """
     Appliquer l'encodage one-hot aux variables catégorielles
     """
@@ -106,3 +109,75 @@ def save_dataset(df, path):
     Sauvegarder le dataset propre
     """
     df.to_csv(path, index=False)
+
+# TODO : a mettre dans un autre fichier
+def analyse_categorical(df, variable, labels=None):
+    # Pourcentage de cardio = 1
+    risk = (
+        df.groupby(variable)["cardio"]
+        .mean()
+        .mul(100)
+        .reset_index()
+    )
+
+    # Remplacement des labels si besoin
+    if labels:
+        risk[variable] = risk[variable].map(labels)
+
+    # Graphique
+    plt.figure(figsize=(7,5))
+
+    sns.barplot(
+        data=risk,
+        x=variable,
+        y="cardio"
+    )
+
+    plt.ylabel("Patients avec maladie cardiovasculaire (%)")
+    plt.xlabel(variable)
+    plt.title(f"Risque cardiovasculaire selon {variable}")
+
+    plt.show()
+
+    print(risk)
+
+    # Test du Chi²
+    table = pd.crosstab(df[variable], df["cardio"])
+
+    chi2, p, dof, expected = chi2_contingency(table)
+
+    print(f"\nChi² : {chi2:.3f}")
+    print(f"p-value : {p:.5f}")
+
+    if p < 0.05:
+        print("✅ Association statistiquement significative")
+    else:
+        print("❌ Pas d'association statistiquement significative")
+
+def analyse_numeric(df, variable):
+
+    sns.boxplot(
+        data=df,
+        x="cardio",
+        y=variable
+    )
+
+    plt.xticks([0,1],["Non","Oui"])
+
+    plt.show()
+
+    from scipy.stats import mannwhitneyu
+
+    g0 = df[df["cardio"]==0][variable]
+    g1 = df[df["cardio"]==1][variable]
+
+    stat,p = mannwhitneyu(g0,g1)
+
+    print(df.groupby("cardio")[variable].mean())
+
+    print(f"\np-value : {p:.10f}")
+
+    if p<0.05:
+        print("✅ Association statistiquement significative")
+    else:
+        print("❌ Pas d'association statistiquement significative")
