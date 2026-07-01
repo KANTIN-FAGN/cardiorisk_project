@@ -206,31 +206,39 @@ Ces données permettent :
 # 🏗️ Architecture du projet
 
 ```text
-cardio-predict/
+cardiorisk_project/
 │
 ├── data/
 │   ├── raw/
 │   ├── processed/
 │
 ├── notebooks/
+│   ├── cardio_train/       (01_data_cleaning, 02_eda, 03_modeling, 04_interpretation)
+│   └── heart_disease/      (idem)
 │
 ├── models/
+│   ├── cardio_train/       (best_model.pkl, scaler.pkl, feature_names.pkl, metrics.json)
+│   └── heart_disease/      (idem)
 │
 ├── src/
-│   ├── preprocessing/
-│   ├── training/
-│   ├── evaluation/
-│   ├── visualization/
+│   ├── data_preprocessing.py
+│   ├── feature_engineering.py
+│   ├── train_model.py
+│   ├── evaluate_model.py
+│   ├── predict.py
+│   └── utils.py
 │
 ├── app/
-│   ├── pages/
-│   ├── assets/
+│   ├── Home.py
+│   ├── pages/               (Analyse mondiale, Analyse patients, Modélisation, Prédiction, À propos)
+│   ├── components/          (cards.py, theme.py)
+│   └── assets/              (styles.css)
 │
 ├── reports/
 │
-├── README.md
-│
-└── requirements.txt
+├── .streamlit/config.toml
+├── pyproject.toml
+└── README.md
 ```
 
 ---
@@ -318,6 +326,21 @@ Les performances sont évaluées à l'aide de :
 * ROC-AUC Score
 * Confusion Matrix
 
+Le **ROC-AUC** est utilisé comme critère de sélection du meilleur modèle : contrairement à l'accuracy,
+il reste fiable même sur un dataset déséquilibré (le cas du BRFSS, ~10% de cas positifs).
+
+---
+
+# 📈 Résultats obtenus
+
+| Dataset | Modèles comparés | Meilleur modèle | ROC-AUC |
+|---|---|---|---|
+| Cardio Train (clinique) | Logistic Regression, Random Forest, XGBoost, LightGBM | **Random Forest** | 0.807 |
+| BRFSS (lifestyle) | Logistic Regression, Random Forest, XGBoost, LightGBM | **LightGBM** | 0.836 |
+
+Détail des 4 modèles, courbes ROC, matrices de confusion et feature importance : page *Modélisation*
+de l'application, ou `models/<dataset>/metrics.json` après entraînement.
+
 ---
 
 # 📊 Visualisations
@@ -367,21 +390,43 @@ Le projet inclut :
 
 # 🚀 Installation
 
+Le projet est géré avec [uv](https://docs.astral.sh/uv/).
+
 ```bash
-git clone https://github.com/votre-compte/cardio-predict.git
+git clone https://github.com/votre-compte/cardiorisk-project.git
 
-cd cardio-predict
+cd cardiorisk-project
 
-pip install -r requirements.txt
+uv sync
 ```
+
+Cette commande installe automatiquement toutes les dépendances listées dans `pyproject.toml`
+(pandas, scikit-learn, xgboost, lightgbm, streamlit, plotly...) dans un environnement virtuel `.venv/`.
+
+> LightGBM nécessite `libomp` sur macOS : `brew install libomp` si l'entraînement échoue avec une erreur `libomp.dylib`.
 
 ---
 
 # ▶️ Lancer l'application
 
 ```bash
-streamlit run app.py
+uv run streamlit run app/Home.py
 ```
+
+---
+
+# 🤖 Entraîner les modèles
+
+Les modèles ne sont pas versionnés dans le dépôt (fichiers binaires). Pour les (ré)entraîner :
+
+```bash
+uv run python -m src.train_model
+```
+
+Ce script entraîne 4 modèles (Logistic Regression, Random Forest, XGBoost, LightGBM) sur chacun des
+deux datasets patients, sélectionne le meilleur par ROC-AUC, et sauvegarde le modèle, le scaler,
+les features et les métriques dans `models/<dataset>/`. La page *Prédiction* de l'application en a besoin
+pour fonctionner.
 
 ---
 
