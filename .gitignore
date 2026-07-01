@@ -45,3 +45,5 @@ logs/
 
 # Variables d'environnement
 *.env
+
+.claude

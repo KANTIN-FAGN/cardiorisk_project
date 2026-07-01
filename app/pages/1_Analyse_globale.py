@@ -10,17 +10,17 @@ import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
-from components.cards import load_css
+from components.cards import load_css, hero, section_header
+from components.theme import style, SEQUENTIAL_SCALE, COLORS
 
 st.set_page_config(page_title="Analyse mondiale", page_icon="🌍", layout="wide")
 load_css()
 
-LAYOUT = dict(paper_bgcolor="#161b22", plot_bgcolor="#161b22", font_color="#e2e8f0")
-
-st.title("Analyse mondiale")
-st.caption("Mortalité cardiovasculaire dans le monde — données OMS / Our World in Data")
-
-st.divider()
+hero(
+    kicker="Échelle mondiale",
+    title="Analyse mondiale",
+    subtitle="Mortalité cardiovasculaire dans le monde — données OMS / Our World in Data.",
+)
 
 # ── Chargement ────────────────────────────────────────────────────────────────
 
@@ -35,7 +35,11 @@ gdp_df, gender_df, std_df = load_world_data()
 
 # ── 1. Carte choroplèthe ──────────────────────────────────────────────────────
 
-st.subheader("Taux de mortalité cardiovasculaire par pays")
+section_header(
+    "01 — Cartographie",
+    "Taux de mortalité cardiovasculaire par pays",
+    "Décès totaux estimés à partir du taux standardisé (pour 100k habitants) et de la population du pays.",
+)
 
 col_ctrl, _ = st.columns([1, 2])
 with col_ctrl:
@@ -62,18 +66,17 @@ with col_map:
         color="TotalDeaths",
         hover_name="Entity",
         hover_data={"DeathRate": ":.0f", "TotalDeaths": ":,.0f", "Code": False},
-        color_continuous_scale="Reds",
+        color_continuous_scale=SEQUENTIAL_SCALE,
         range_color=(0, map_df["TotalDeaths"].quantile(0.92)),
         labels={"TotalDeaths": "Décès totaux", "DeathRate": "Pour 100k"},
         title=f"Décès cardiovasculaires totaux ({year_std})",
-        template="plotly_dark"
     )
-    fig_map.update_layout(
+    style(
+        fig_map,
         height=420,
-        geo=dict(bgcolor="#161b22", showframe=False, showcoastlines=True, coastlinecolor="#30363d"),
+        geo=dict(bgcolor=COLORS["bg"], showframe=False, showcoastlines=True, coastlinecolor=COLORS["grid"]),
         coloraxis_colorbar=dict(title="Décès<br>totaux"),
         margin=dict(t=40, b=0, l=0, r=0),
-        **LAYOUT
     )
     st.plotly_chart(fig_map, use_container_width=True, config={"scrollZoom": False, "doubleClick": False, "displayModeBar": False})
     st.caption("Décès totaux = taux pour 100k × population. Les pays sans donnée de population apparaissent en gris.")
@@ -87,22 +90,21 @@ with col_bar:
         orientation="h",
         text="label",
         color="TotalDeaths",
-        color_continuous_scale="Reds",
+        color_continuous_scale=SEQUENTIAL_SCALE,
         custom_data=["label"],
         labels={"TotalDeaths": "Décès totaux", "Entity": ""},
         title=f"Top 15 pays ({year_std})",
-        template="plotly_dark"
     )
     fig_bar.update_traces(
         textposition="outside",
         hovertemplate="<b>%{y}</b><br>%{customdata[0]} décès<extra></extra>"
     )
-    fig_bar.update_layout(
+    style(
+        fig_bar,
         height=420,
         showlegend=False,
         coloraxis_showscale=False,
         margin=dict(t=40, b=0, l=0, r=60),
-        **LAYOUT
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
@@ -110,7 +112,11 @@ st.divider()
 
 # ── 2. Mortalité vs PIB ───────────────────────────────────────────────────────
 
-st.subheader("Mortalité cardiovasculaire vs PIB par habitant")
+section_header(
+    "02 — Richesse & santé",
+    "Mortalité cardiovasculaire vs PIB par habitant",
+    "Chaque bulle est un pays, sa taille reflète la population. L'axe des richesses est en échelle logarithmique.",
+)
 
 year_gdp = st.slider(
     "Année",
@@ -127,10 +133,10 @@ income_labels = {
     "High-income countries": "Pays à revenu élevé",
 }
 income_colors = {
-    "Pays à faible revenu": "#ef4444",
-    "Revenu intermédiaire inférieur": "#f97316",
-    "Revenu intermédiaire supérieur": "#eab308",
-    "Pays à revenu élevé": "#3b82f6",
+    "Pays à faible revenu": COLORS["accent"],
+    "Revenu intermédiaire inférieur": COLORS["accent2"],
+    "Revenu intermédiaire supérieur": COLORS["warn"],
+    "Pays à revenu élevé": COLORS["blue"],
 }
 
 gdp_year = (
@@ -157,25 +163,17 @@ fig_gdp = px.scatter(
         "IncomeGroup": "Groupe de revenus"
     },
     title=f"Mortalité cardiovasculaire selon le niveau de richesse ({year_gdp})",
-    template="plotly_dark"
 )
-fig_gdp.update_layout(height=480, **LAYOUT)
+style(fig_gdp, height=480)
 st.plotly_chart(fig_gdp, use_container_width=True)
 
 st.divider()
 
 # ── 3. Évolution Hommes vs Femmes ─────────────────────────────────────────────
 
-st.subheader("Évolution du taux de mortalité : Hommes vs Femmes")
-
-# Top pays les plus peuplés / connus pour le sélecteur
-top_entities = (
-    gender_df[gender_df["Year"] == 2020]
-    .dropna(subset=["Men", "Women"])
-    .query("Code.str.len() == 3", engine="python")
-    .sort_values("Men", ascending=False)["Entity"]
-    .head(40)
-    .tolist()
+section_header(
+    "03 — Écart de genre",
+    "Évolution du taux de mortalité : Hommes vs Femmes",
 )
 
 selected = st.multiselect(
@@ -206,9 +204,8 @@ if selected:
             "Sexe": "Sexe"
         },
         title="Évolution du taux de mortalité cardiovasculaire par pays et par sexe",
-        template="plotly_dark"
     )
-    fig_gender.update_layout(height=480, **LAYOUT)
+    style(fig_gender, height=480)
     st.plotly_chart(fig_gender, use_container_width=True)
 else:
     st.info("Sélectionne au moins un pays.")
