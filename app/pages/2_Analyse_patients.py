@@ -12,17 +12,13 @@ import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
-from components.cards import load_css, hero, section_header, stat_caption
-from components.theme import style, fmt_p, sig_html, STATUS_COLORS, GENDER_COLORS, COLORS
+from components.cards import load_css
+from components.theme import style, fmt_p, sig_label, STATUS_COLORS, GENDER_COLORS, COLORS
 
 st.set_page_config(page_title="Analyse patients", page_icon="🔬", layout="wide")
 load_css()
 
-hero(
-    kicker="Échelle individuelle",
-    title="Analyse des patients",
-    subtitle="Deux cohortes, deux natures de données — cliniques et déclaratives — pour comparer la précision des facteurs de risque.",
-)
+st.title("Analyse des patients")
 
 def plot_risk_bar(df, col, target, labels, title):
     risk = df.groupby(col)[target].mean().mul(100).reset_index()
@@ -98,7 +94,7 @@ with tab1:
     st.divider()
 
     # Distribution cible + sexe
-    section_header("01", "Distribution")
+    st.subheader("Distribution")
     col_a, col_b = st.columns(2)
     with col_a:
         td = dff["cardio"].map(CARDIO_LABELS).value_counts().reset_index()
@@ -122,7 +118,7 @@ with tab1:
     st.divider()
 
     # Distribution âge
-    section_header("02", "Distribution de l'âge par sexe")
+    st.subheader("Distribution de l'âge par sexe")
     ad = dff.copy()
     ad["Sexe"] = ad["gender_male"].map(GENDER_LABELS)
     fig_age = px.histogram(ad, x="age", color="Sexe",
@@ -136,7 +132,7 @@ with tab1:
     st.divider()
 
     # Risque par facteur catégoriel
-    section_header("03", "Risque cardiovasculaire par facteur")
+    st.subheader("Risque cardiovasculaire par facteur")
     cat_vars = [
         ("gender_male", GENDER_LABELS, "Risque par sexe"),
         ("active", {0: "Sédentaire", 1: "Actif"}, "Activité physique"),
@@ -151,31 +147,31 @@ with tab1:
             fig, chi2, p = plot_risk_bar(dff, col_name, "cardio", labels, title)
             with cols[j]:
                 st.plotly_chart(fig, use_container_width=True)
-                stat_caption(f"Chi² = {chi2:.2f}", f"p-value = {fmt_p(p)}", sig_html(p))
+                st.caption(f"Chi² = {chi2:.2f} | p-value = {fmt_p(p)} | {sig_label(p)}")
 
     st.divider()
 
     # Risque par groupe d'âge
-    section_header("04", "Risque par groupe d'âge")
+    st.subheader("Risque par groupe d'âge")
     ad2 = dff.copy()
     ad2["Groupe"] = pd.cut(ad2["age"], bins=[29, 39, 49, 59, 70],
                            labels=["30-39", "40-49", "50-59", "60-69"])
     age_risk = ad2.groupby("Groupe", observed=True)["cardio"].mean().mul(100).reset_index()
     age_risk.columns = ["Groupe", "Risque (%)"]
     fig_ar = px.bar(age_risk, x="Groupe", y="Risque (%)", color="Risque (%)",
-                    color_continuous_scale=[COLORS["blue"], COLORS["accent"]],
+                    color_continuous_scale=["#f3f4f6", COLORS["accent"]],
                     text=age_risk["Risque (%)"].apply(lambda x: f"{x:.1f}%"),
                     title="Prévalence par groupe d'âge")
     fig_ar.update_traces(textposition="outside")
     style(fig_ar, yaxis_range=[0, 100], coloraxis_showscale=False)
     chi2_a, p_a, _, _ = chi2_contingency(pd.crosstab(ad2["Groupe"], ad2["cardio"]))
     st.plotly_chart(fig_ar, use_container_width=True)
-    stat_caption(f"Chi² = {chi2_a:.2f}", f"p-value = {fmt_p(p_a)}", sig_html(p_a))
+    st.caption(f"Chi² = {chi2_a:.2f} | p-value = {fmt_p(p_a)} | {sig_label(p_a)}")
 
     st.divider()
 
     # Variables numériques
-    section_header("05", "Variables numériques selon le statut")
+    st.subheader("Variables numériques selon le statut")
     num_vars = [("age", "Âge (années)"), ("BMI", "IMC (kg/m²)"),
                 ("ap_hi", "Pression systolique (mmHg)"), ("ap_lo", "Pression diastolique (mmHg)")]
     for i in range(0, len(num_vars), 2):
@@ -192,12 +188,12 @@ with tab1:
                 g0 = dff[dff["cardio"] == 0][col_name].dropna()
                 g1 = dff[dff["cardio"] == 1][col_name].dropna()
                 _, p_mw = mannwhitneyu(g0, g1, alternative="two-sided")
-                stat_caption(f"Sain : {g0.mean():.1f}", f"Malade : {g1.mean():.1f}", f"p = {fmt_p(p_mw)}", sig_html(p_mw))
+                st.caption(f"Sain : {g0.mean():.1f} | Malade : {g1.mean():.1f} | p = {fmt_p(p_mw)} | {sig_label(p_mw)}")
 
     st.divider()
 
     # Corrélation
-    section_header("06", "Matrice de corrélation")
+    st.subheader("Matrice de corrélation")
     corr_cols = ["age", "BMI", "ap_hi", "ap_lo", "cholesterol", "gluc",
                  "smoke", "alco", "active", "gender_male", "cardio"]
     corr = dff[corr_cols].corr().round(2).rename(index={
@@ -220,7 +216,7 @@ with tab1:
 # ════════════════════════════════════════════════════════════════════════════
 
 with tab2:
-    hd = load_brfss()
+    hd_raw = load_brfss()
     TARGET = "HeartDiseaseorAttack"
     HD_LABELS = {0.0: "Sain", 1.0: "Malade"}
     SEX_LABELS = {0.0: "Femme", 1.0: "Homme"}
@@ -234,21 +230,44 @@ with tab2:
     }
     GENHLTH_MAP = {1.0: "Excellent", 2.0: "Très bon", 3.0: "Bon", 4.0: "Passable", 5.0: "Mauvais"}
 
-    st.caption(f"Dataset : enquête BRFSS 2015, USA · {len(hd):,} répondants")
+    # Filtres
+    with st.sidebar:
+        st.divider()
+        st.header("Filtres — BRFSS")
+        age_filter = st.multiselect(
+            "Groupe d'âge", options=list(AGE_MAP.values()), default=list(AGE_MAP.values()),
+            key="brfss_age"
+        )
+        sex_filter = st.multiselect(
+            "Sexe", [0.0, 1.0], default=[0.0, 1.0],
+            format_func=lambda x: SEX_LABELS[x], key="brfss_sex"
+        )
+        status_filter = st.multiselect(
+            "Statut", [0.0, 1.0], default=[0.0, 1.0],
+            format_func=lambda x: HD_LABELS[x], key="brfss_status"
+        )
+
+    hd = hd_raw[
+        hd_raw["Age"].map(AGE_MAP).isin(age_filter) &
+        hd_raw["Sex"].isin(sex_filter) &
+        hd_raw[TARGET].isin(status_filter)
+    ].copy()
+
+    st.caption(f"Dataset : enquête BRFSS 2015, USA · {len(hd):,} répondants sélectionnés sur {len(hd_raw):,}")
 
     # Métriques
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Répondants", f"{len(hd):,}")
-    c2.metric("Prévalence cardio", f"{hd[TARGET].mean()*100:.1f}%")
-    c3.metric("IMC moyen", f"{hd['BMI'].mean():.1f}")
-    c4.metric("% Fumeurs", f"{hd['Smoker'].mean()*100:.1f}%")
+    c2.metric("Prévalence cardio", f"{hd[TARGET].mean()*100:.1f}%" if len(hd) else "—")
+    c3.metric("IMC moyen", f"{hd['BMI'].mean():.1f}" if len(hd) else "—")
+    c4.metric("% Fumeurs", f"{hd['Smoker'].mean()*100:.1f}%" if len(hd) else "—")
 
     st.info("⚠️ Ce dataset est fortement déséquilibré : seulement **10% de cas positifs** contre 50% dans le Cardio Train. Cela reflète la réalité d'une enquête populationnelle.")
 
     st.divider()
 
     # Distribution cible + sexe
-    section_header("01", "Distribution")
+    st.subheader("Distribution")
     col_a, col_b = st.columns(2)
     with col_a:
         td = hd[TARGET].map(HD_LABELS).value_counts().reset_index()
@@ -272,7 +291,7 @@ with tab2:
     st.divider()
 
     # Risque par facteur lifestyle
-    section_header("02", "Risque cardiovasculaire par facteur lifestyle")
+    st.subheader("Risque cardiovasculaire par facteur lifestyle")
     cat_vars_hd = [
         ("HighBP", YN, "Hypertension"),
         ("HighChol", YN, "Cholestérol élevé"),
@@ -289,31 +308,31 @@ with tab2:
             fig, chi2, p = plot_risk_bar(hd, col_name, TARGET, labels, title)
             with cols[j]:
                 st.plotly_chart(fig, use_container_width=True)
-                stat_caption(f"Chi² = {chi2:.2f}", f"p-value = {fmt_p(p)}", sig_html(p))
+                st.caption(f"Chi² = {chi2:.2f} | p-value = {fmt_p(p)} | {sig_label(p)}")
 
     st.divider()
 
     # Risque par groupe d'âge
-    section_header("03", "Risque par groupe d'âge")
+    st.subheader("Risque par groupe d'âge")
     hd2 = hd.copy()
     hd2["Groupe d'âge"] = hd2["Age"].map(AGE_MAP)
     age_order = list(AGE_MAP.values())
     age_risk_hd = hd2.groupby("Groupe d'âge")[TARGET].mean().mul(100).reindex(age_order).reset_index()
     age_risk_hd.columns = ["Groupe d'âge", "Risque (%)"]
     fig_ar = px.bar(age_risk_hd, x="Groupe d'âge", y="Risque (%)", color="Risque (%)",
-                    color_continuous_scale=[COLORS["blue"], COLORS["accent"]],
+                    color_continuous_scale=["#f3f4f6", COLORS["accent"]],
                     text=age_risk_hd["Risque (%)"].apply(lambda x: f"{x:.1f}%"),
                     title="Prévalence par groupe d'âge")
     fig_ar.update_traces(textposition="outside")
     style(fig_ar, yaxis_range=[0, 100], coloraxis_showscale=False)
     chi2_a, p_a, _, _ = chi2_contingency(pd.crosstab(hd2["Groupe d'âge"], hd2[TARGET]))
     st.plotly_chart(fig_ar, use_container_width=True)
-    stat_caption(f"Chi² = {chi2_a:.2f}", f"p-value = {fmt_p(p_a)}", sig_html(p_a))
+    st.caption(f"Chi² = {chi2_a:.2f} | p-value = {fmt_p(p_a)} | {sig_label(p_a)}")
 
     st.divider()
 
     # IMC boxplot
-    section_header("04", "IMC selon le statut cardiovasculaire")
+    st.subheader("IMC selon le statut cardiovasculaire")
     bd = hd.copy()
     bd["Statut"] = bd[TARGET].map(HD_LABELS)
     fig_bmi = px.box(bd, x="Statut", y="BMI", color="Statut",
@@ -324,12 +343,12 @@ with tab2:
     g0 = hd[hd[TARGET] == 0]["BMI"]
     g1 = hd[hd[TARGET] == 1]["BMI"]
     _, p_bmi = mannwhitneyu(g0, g1, alternative="two-sided")
-    stat_caption(f"Sain : {g0.mean():.1f}", f"Malade : {g1.mean():.1f}", f"p = {fmt_p(p_bmi)}", sig_html(p_bmi))
+    st.caption(f"Sain : {g0.mean():.1f} | Malade : {g1.mean():.1f} | p = {fmt_p(p_bmi)} | {sig_label(p_bmi)}")
 
     st.divider()
 
     # Corrélation
-    section_header("05", "Matrice de corrélation")
+    st.subheader("Matrice de corrélation")
     corr_cols_hd = [TARGET, "HighBP", "HighChol", "BMI", "Smoker", "Diabetes",
                     "PhysActivity", "Stroke", "Age", "Sex"]
     corr_hd = hd[corr_cols_hd].corr().round(2).rename(index={

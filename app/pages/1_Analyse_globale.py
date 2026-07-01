@@ -10,17 +10,16 @@ import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
-from components.cards import load_css, hero, section_header
+from components.cards import load_css
 from components.theme import style, SEQUENTIAL_SCALE, COLORS
 
 st.set_page_config(page_title="Analyse mondiale", page_icon="🌍", layout="wide")
 load_css()
 
-hero(
-    kicker="Échelle mondiale",
-    title="Analyse mondiale",
-    subtitle="Mortalité cardiovasculaire dans le monde — données OMS / Our World in Data.",
-)
+st.title("Analyse mondiale")
+st.caption("Mortalité cardiovasculaire dans le monde — données OMS / Our World in Data")
+
+st.divider()
 
 # ── Chargement ────────────────────────────────────────────────────────────────
 
@@ -35,11 +34,7 @@ gdp_df, gender_df, std_df = load_world_data()
 
 # ── 1. Carte choroplèthe ──────────────────────────────────────────────────────
 
-section_header(
-    "01 — Cartographie",
-    "Taux de mortalité cardiovasculaire par pays",
-    "Décès totaux estimés à partir du taux standardisé (pour 100k habitants) et de la population du pays.",
-)
+st.subheader("Taux de mortalité cardiovasculaire par pays")
 
 col_ctrl, _ = st.columns([1, 2])
 with col_ctrl:
@@ -112,11 +107,7 @@ st.divider()
 
 # ── 2. Mortalité vs PIB ───────────────────────────────────────────────────────
 
-section_header(
-    "02 — Richesse & santé",
-    "Mortalité cardiovasculaire vs PIB par habitant",
-    "Chaque bulle est un pays, sa taille reflète la population. L'axe des richesses est en échelle logarithmique.",
-)
+st.subheader("Mortalité cardiovasculaire vs PIB par habitant")
 
 year_gdp = st.slider(
     "Année",
@@ -131,12 +122,6 @@ income_labels = {
     "Lower-middle-income countries": "Revenu intermédiaire inférieur",
     "Upper-middle-income countries": "Revenu intermédiaire supérieur",
     "High-income countries": "Pays à revenu élevé",
-}
-income_colors = {
-    "Pays à faible revenu": COLORS["accent"],
-    "Revenu intermédiaire inférieur": COLORS["accent2"],
-    "Revenu intermédiaire supérieur": COLORS["warn"],
-    "Pays à revenu élevé": COLORS["blue"],
 }
 
 gdp_year = (
@@ -156,7 +141,6 @@ fig_gdp = px.scatter(
     hover_name="Entity",
     size_max=50,
     log_x=True,
-    color_discrete_map=income_colors,
     labels={
         "GDP": "PIB par habitant (USD, échelle log)",
         "DeathRate": "Décès cardiovasculaires / 100k",
@@ -171,10 +155,7 @@ st.divider()
 
 # ── 3. Évolution Hommes vs Femmes ─────────────────────────────────────────────
 
-section_header(
-    "03 — Écart de genre",
-    "Évolution du taux de mortalité : Hommes vs Femmes",
-)
+st.subheader("Évolution du taux de mortalité : Hommes vs Femmes")
 
 selected = st.multiselect(
     "Pays",

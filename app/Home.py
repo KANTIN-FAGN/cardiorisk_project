@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent))
-from components.cards import load_css, hero, section_header
+from components.cards import load_css
 
 st.set_page_config(
     page_title="CardioRisk Explorer",
@@ -14,42 +14,36 @@ st.set_page_config(
 
 load_css()
 
-# ── Hero ──────────────────────────────────────────────────────────────────────
+# ── En-tête ───────────────────────────────────────────────────────────────────
 
-hero(
-    kicker="Data Storytelling · Santé cardiovasculaire",
-    title="CardioRisk Explorer",
-    subtitle=(
-        "Une exploration des facteurs de risque cardiovasculaire, du monde entier "
-        "jusqu'au profil individuel — combinant données OMS, deux cohortes de patients "
-        "et modèles de Machine Learning."
-    ),
-    chips=["194 pays", "298 k patients", "2 modèles ML", "OMS · Kaggle"],
-)
+st.title("CardioRisk Explorer")
+st.markdown("""
+Projet d'analyse et de prédiction des maladies cardiovasculaires,
+combinant des données mondiales et deux populations de patients distinctes.
+""")
+
+st.divider()
 
 # ── Contexte ──────────────────────────────────────────────────────────────────
 
-section_header(
-    "01 — Contexte",
-    "Un enjeu de santé publique mondial",
-)
-
+st.subheader("Contexte")
 st.markdown("""
 Les maladies cardiovasculaires sont la **première cause de mortalité dans le monde**,
 responsables de près de **18 millions de décès par an** selon l'OMS.
 
 Ce projet explore les facteurs de risque à deux niveaux :
-- **À l'échelle mondiale** — évolution de la mortalité par pays, par revenu, par sexe
-- **À l'échelle individuelle** — profils de patients et prédiction du risque personnel
+- **À l'échelle mondiale** : évolution de la mortalité par pays, par revenu, par sexe
+- **À l'échelle individuelle** : profils de patients et prédiction du risque personnel
 """)
 
 st.divider()
 
 # ── Datasets ──────────────────────────────────────────────────────────────────
 
-section_header("02 — Données", "Les jeux de données utilisés")
+st.subheader("Les données utilisées")
 
-st.markdown("##### 🌍 Données mondiales — Our World in Data / OMS")
+# --- Données mondiales ---
+st.markdown("#### 🌍 Données mondiales — Our World in Data / OMS")
 
 col1, col2, col3 = st.columns(3)
 
@@ -90,7 +84,8 @@ pour les hommes et les femmes.
 
 st.divider()
 
-st.markdown("##### 🏥 Données patients — 2 populations distinctes")
+# --- Données patients ---
+st.markdown("#### 🏥 Données patients — 2 populations distinctes")
 
 col_a, col_b = st.columns(2)
 
@@ -140,7 +135,7 @@ st.divider()
 
 # ── Objectifs du projet ───────────────────────────────────────────────────────
 
-section_header("03 — Approche", "Objectifs du projet")
+st.subheader("Objectifs du projet")
 
 col1, col2, col3 = st.columns(3)
 
