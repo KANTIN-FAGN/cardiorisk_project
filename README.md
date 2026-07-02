@@ -417,7 +417,7 @@ uv run streamlit run app/Home.py
 
 # 🤖 Entraîner les modèles
 
-Les modèles ne sont pas versionnés dans le dépôt (fichiers binaires). Pour les (ré)entraîner :
+Les modèles entraînés sont fournis dans `models/`. Pour les ré-entraîner (après modification des données ou des features) :
 
 ```bash
 uv run python -m src.train_model

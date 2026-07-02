@@ -110,20 +110,114 @@ def brfss_summary(row):
     ]
 
 
-def show_result(proba, true_label=None):
-    pred_label = "Malade" if proba >= 0.5 else "Sain"
-    icon = "🔴" if proba >= 0.5 else "🟢"
+def cardio_risk_factors(row):
+    """Facteurs de risque modifiables détectés dans un profil clinique + recommandations."""
+    factors, recos = [], []
+    if row["bp_category"] >= 3:
+        factors.append("Hypertension (stade 1 ou plus)")
+        recos.append("Faire contrôler la tension par un professionnel de santé")
+    elif row["bp_category"] == 2:
+        factors.append("Tension artérielle élevée")
+        recos.append("Surveiller régulièrement la tension artérielle")
+    if row["cholesterol"] >= 2:
+        factors.append("Cholestérol élevé")
+        recos.append("Réaliser un bilan lipidique et adapter l'alimentation")
+    if row["gluc"] >= 2:
+        factors.append("Glycémie élevée")
+        recos.append("Réaliser un bilan glycémique (dépistage du diabète)")
+    if row["smoke"] == 1:
+        factors.append("Tabagisme")
+        recos.append("Arrêter le tabac — premier facteur de risque évitable")
+    if row["active"] == 0:
+        factors.append("Sédentarité")
+        recos.append("Pratiquer au moins 150 min d'activité modérée par semaine (OMS)")
+    if row["BMI"] >= 30:
+        factors.append(f"Obésité (IMC {row['BMI']:.1f})")
+        recos.append("Viser une perte de poids progressive avec un suivi adapté")
+    elif row["BMI"] >= 25:
+        factors.append(f"Surpoids (IMC {row['BMI']:.1f})")
+        recos.append("Adopter une alimentation équilibrée et une activité régulière")
+    if row["alco"] == 1:
+        factors.append("Consommation d'alcool")
+        recos.append("Réduire la consommation d'alcool")
+    return factors, recos
+
+
+def brfss_risk_factors(row):
+    """Facteurs de risque modifiables détectés dans un profil lifestyle + recommandations."""
+    factors, recos = [], []
+    if row["HighBP"] == 1:
+        factors.append("Hypertension déclarée")
+        recos.append("Suivi régulier de la tension artérielle")
+    if row["HighChol"] == 1:
+        factors.append("Cholestérol élevé déclaré")
+        recos.append("Réaliser un bilan lipidique et adapter l'alimentation")
+    if row["Smoker"] == 1:
+        factors.append("Tabagisme")
+        recos.append("Arrêter le tabac — premier facteur de risque évitable")
+    if row["PhysActivity"] == 0:
+        factors.append("Pas d'activité physique")
+        recos.append("Pratiquer au moins 150 min d'activité modérée par semaine (OMS)")
+    if row["Diabetes"] >= 1:
+        factors.append("Diabète ou pré-diabète")
+        recos.append("Suivi glycémique régulier avec un professionnel de santé")
+    if row["BMI"] >= 30:
+        factors.append(f"Obésité (IMC {row['BMI']:.0f})")
+        recos.append("Viser une perte de poids progressive avec un suivi adapté")
+    elif row["BMI"] >= 25:
+        factors.append(f"Surpoids (IMC {row['BMI']:.0f})")
+        recos.append("Adopter une alimentation équilibrée et une activité régulière")
+    if row["HvyAlcoholConsump"] == 1:
+        factors.append("Consommation excessive d'alcool")
+        recos.append("Réduire la consommation d'alcool")
+    if row["GenHlth"] >= 4:
+        factors.append("Santé générale perçue dégradée")
+        recos.append("Faire un point de santé global avec un médecin")
+    return factors, recos
+
+
+def show_result(proba, true_label=None, factors=None, recos=None):
+    if proba >= 0.5:
+        level, icon = "Risque élevé", "🔴"
+    elif proba >= 0.25:
+        level, icon = "Risque modéré", "🟡"
+    else:
+        level, icon = "Risque faible", "🟢"
+
     col1, col2 = st.columns([1, 2])
     with col1:
         st.metric("Risque estimé", f"{proba * 100:.0f}%")
     with col2:
         st.progress(min(max(proba, 0.0), 1.0))
-        st.markdown(f"{icon} **Prédiction : {pred_label}**")
+        st.markdown(f"{icon} **{level}**")
     if true_label is not None:
         st.caption(
             f"Profil réel (tiré du dataset) : **{true_label}** — utile pour tester le modèle, "
             "mais ce profil a pu faire partie des données d'entraînement."
         )
+
+    col_f, col_r = st.columns(2)
+    with col_f:
+        st.markdown("**📈 Facteurs de risque identifiés**")
+        if factors:
+            for f in factors:
+                st.markdown(f"- {f}")
+        else:
+            st.markdown("- Aucun facteur de risque modifiable détecté dans ce profil")
+    with col_r:
+        st.markdown("**💡 Recommandations**")
+        if recos:
+            for r in dict.fromkeys(recos):
+                st.markdown(f"- {r}")
+        if proba >= 0.5:
+            st.markdown("- **Consultation médicale recommandée**")
+        elif not recos:
+            st.markdown("- Maintenir les bonnes habitudes actuelles")
+
+    st.caption(
+        "⚕️ Ces recommandations sont génériques et à visée pédagogique — "
+        "elles ne remplacent pas un avis médical personnalisé."
+    )
 
 
 try:
@@ -196,8 +290,9 @@ with tab1:
         }
         proba, _ = predict_risk(bundle_cardio, input_row)
         true_label = CARDIO_LABELS.get(int(profile["cardio"])) if "cardio" in profile else None
+        factors, recos = cardio_risk_factors(input_row)
         st.divider()
-        show_result(proba, true_label)
+        show_result(proba, true_label, factors, recos)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -289,5 +384,6 @@ with tab2:
         }
         proba, _ = predict_risk(bundle_brfss, input_row)
         true_label = HD_LABELS.get(p["HeartDiseaseorAttack"]) if "HeartDiseaseorAttack" in p else None
+        factors, recos = brfss_risk_factors(input_row)
         st.divider()
-        show_result(proba, true_label)
+        show_result(proba, true_label, factors, recos)
