@@ -72,18 +72,30 @@ for tab, (name, config) in zip([tab1, tab2], DATASETS.items()):
         }).T
         comp = comp.round(3)
 
-        # Colonne validation croisée (moyenne ± écart-type sur 5 folds) si disponible
+        highlight = COLORS["accent"] + "22"
+        styler = comp.style.highlight_max(axis=0, color=highlight, subset=list(comp.columns))
+
+        # Colonne validation croisée (moyenne ± écart-type sur 5 folds) si disponible.
+        # Texte à cause du "±" : le surlignage du max se fait sur la moyenne numérique.
         if all("cv_roc_auc_mean" in m for m in models.values()):
+            cv_means = pd.Series(
+                {m: models[m]["cv_roc_auc_mean"] for m in comp.index}
+            )
             comp["ROC-AUC (CV 5-fold)"] = [
                 f"{models[m]['cv_roc_auc_mean']:.3f} ± {models[m]['cv_roc_auc_std']:.3f}"
                 for m in comp.index
             ]
+            styler = comp.style.highlight_max(
+                axis=0, color=highlight, subset=[c for c in comp.columns if c != "ROC-AUC (CV 5-fold)"]
+            ).apply(
+                lambda col: [
+                    f"background-color: {highlight}" if m == cv_means.idxmax() else ""
+                    for m in comp.index
+                ],
+                subset=["ROC-AUC (CV 5-fold)"],
+            )
 
-        numeric_cols = [c for c in comp.columns if comp[c].dtype != object]
-        st.dataframe(
-            comp.style.highlight_max(axis=0, color=COLORS["accent"] + "22", subset=numeric_cols),
-            use_container_width=True,
-        )
+        st.dataframe(styler, use_container_width=True)
         st.caption(
             f"🏆 Modèle retenu : **{best_name}** — sélection basée sur le ROC-AUC "
             "(robuste au déséquilibre des classes, contrairement à l'accuracy seule). "
