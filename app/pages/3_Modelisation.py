@@ -72,13 +72,23 @@ for tab, (name, config) in zip([tab1, tab2], DATASETS.items()):
         }).T
         comp = comp.round(3)
 
+        # Colonne validation croisée (moyenne ± écart-type sur 5 folds) si disponible
+        if all("cv_roc_auc_mean" in m for m in models.values()):
+            comp["ROC-AUC (CV 5-fold)"] = [
+                f"{models[m]['cv_roc_auc_mean']:.3f} ± {models[m]['cv_roc_auc_std']:.3f}"
+                for m in comp.index
+            ]
+
+        numeric_cols = [c for c in comp.columns if comp[c].dtype != object]
         st.dataframe(
-            comp.style.highlight_max(axis=0, color=COLORS["accent"] + "22"),
+            comp.style.highlight_max(axis=0, color=COLORS["accent"] + "22", subset=numeric_cols),
             use_container_width=True,
         )
         st.caption(
             f"🏆 Modèle retenu : **{best_name}** — sélection basée sur le ROC-AUC "
-            "(robuste au déséquilibre des classes, contrairement à l'accuracy seule)."
+            "(robuste au déséquilibre des classes, contrairement à l'accuracy seule). "
+            "La colonne CV donne la moyenne ± écart-type sur 5 folds stratifiés du jeu d'entraînement : "
+            "un écart-type faible indique des performances stables, non dues au hasard du découpage."
         )
 
         st.divider()
