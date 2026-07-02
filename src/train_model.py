@@ -13,7 +13,7 @@ import pandas as pd
 from lightgbm import LGBMClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 
@@ -87,9 +87,15 @@ def train_dataset(name, config):
 
     scale_pos_weight = (y_train == 0).sum() / (y_train == 1).sum()
 
+    # Validation croisée 5-fold stratifiée sur le train uniquement :
+    # le test reste un holdout jamais vu, la CV mesure la stabilité des modèles.
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
     results = {}
     fitted_models = {}
     for model_name, model in build_models(scale_pos_weight).items():
+        cv_scores = cross_val_score(model, X_train_s, y_train, cv=cv, scoring="roc_auc")
+
         model.fit(X_train_s, y_train)
         y_pred = model.predict(X_test_s)
         y_proba = model.predict_proba(X_test_s)[:, 1]
@@ -97,13 +103,16 @@ def train_dataset(name, config):
         metrics = compute_metrics(y_test, y_pred, y_proba)
         results[model_name] = {
             **metrics,
+            "cv_roc_auc_mean": float(cv_scores.mean()),
+            "cv_roc_auc_std": float(cv_scores.std()),
             "confusion_matrix": compute_confusion_matrix(y_test, y_pred),
             "roc_curve": compute_roc_curve(y_test, y_proba),
         }
         fitted_models[model_name] = model
         print(
             f"{model_name:22s} | accuracy={metrics['accuracy']:.3f}  "
-            f"f1={metrics['f1']:.3f}  roc_auc={metrics['roc_auc']:.3f}"
+            f"f1={metrics['f1']:.3f}  roc_auc={metrics['roc_auc']:.3f}  "
+            f"cv_roc_auc={cv_scores.mean():.3f}±{cv_scores.std():.3f}"
         )
 
     # Le ROC-AUC est le critère de sélection : robuste au déséquilibre des classes,
