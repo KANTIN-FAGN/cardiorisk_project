@@ -52,56 +52,79 @@ pop_year = gdp_df[gdp_df["Year"] == year_std][["Code", "Population"]].dropna(sub
 map_df = map_base.merge(pop_year, on="Code", how="left")
 map_df["TotalDeaths"] = (map_df["DeathRate"] * map_df["Population"] / 100_000).round(0)
 
-col_map, col_bar = st.columns([1.6, 1])
+# ── Carte pleine largeur ──────────────────────────────────────────────────────
+fig_map = px.choropleth(
+    map_df.dropna(subset=["TotalDeaths"]),
+    locations="Code",
+    color="TotalDeaths",
+    hover_name="Entity",
+    hover_data={"DeathRate": ":.0f", "TotalDeaths": ":,.0f", "Code": False},
+    color_continuous_scale=SEQUENTIAL_SCALE,
+    range_color=(0, map_df["TotalDeaths"].quantile(0.92)),
+    labels={"TotalDeaths": "Décès totaux", "DeathRate": "Pour 100k"},
+    title=f"Décès cardiovasculaires totaux ({year_std})",
+)
+style(
+    fig_map,
+    height=460,
+    geo=dict(bgcolor=COLORS["bg"], showframe=False, showcoastlines=True, coastlinecolor=COLORS["grid"]),
+    coloraxis_colorbar=dict(title="Décès<br>totaux"),
+    margin=dict(t=40, b=0, l=0, r=0),
+)
+st.plotly_chart(fig_map, use_container_width=True, config={"scrollZoom": False, "doubleClick": False, "displayModeBar": False})
+st.caption("Décès totaux = taux pour 100k × population. Les pays sans donnée de population apparaissent en gris.")
 
-with col_map:
-    fig_map = px.choropleth(
-        map_df.dropna(subset=["TotalDeaths"]),
-        locations="Code",
-        color="TotalDeaths",
-        hover_name="Entity",
-        hover_data={"DeathRate": ":.0f", "TotalDeaths": ":,.0f", "Code": False},
-        color_continuous_scale=SEQUENTIAL_SCALE,
-        range_color=(0, map_df["TotalDeaths"].quantile(0.92)),
-        labels={"TotalDeaths": "Décès totaux", "DeathRate": "Pour 100k"},
-        title=f"Décès cardiovasculaires totaux ({year_std})",
-    )
-    style(
-        fig_map,
-        height=420,
-        geo=dict(bgcolor=COLORS["bg"], showframe=False, showcoastlines=True, coastlinecolor=COLORS["grid"]),
-        coloraxis_colorbar=dict(title="Décès<br>totaux"),
-        margin=dict(t=40, b=0, l=0, r=0),
-    )
-    st.plotly_chart(fig_map, use_container_width=True, config={"scrollZoom": False, "doubleClick": False, "displayModeBar": False})
-    st.caption("Décès totaux = taux pour 100k × population. Les pays sans donnée de population apparaissent en gris.")
+# ── Classements Top 15 haut / bas (taux standardisé pour 100k) ────────────────
+# On classe sur le taux standardisé (comparable entre pays), en excluant les
+# entités non-pays (agrégats régionaux, groupes de revenu) via Code à 3 lettres.
+rank_df = map_df[map_df["Code"].str.len() == 3].dropna(subset=["TotalDeaths"]).copy()
 
-with col_bar:
-    top_n = map_df.dropna(subset=["TotalDeaths"]).nlargest(15, "TotalDeaths").copy()
-    top_n = top_n.sort_values("TotalDeaths")
-    top_n["label"] = top_n["TotalDeaths"].apply(lambda x: f"{x/1e6:.2f}M" if x >= 1e6 else f"{x/1e3:.0f}k")
-    fig_bar = px.bar(
-        top_n, x="TotalDeaths", y="Entity",
+
+def fmt_deaths(x):
+    if x >= 1e6:
+        return f"{x/1e6:.2f} M"
+    if x >= 1e3:
+        return f"{x/1e3:.0f} k"
+    return f"{x:.0f}"
+
+
+def rank_bar(df, title, ascending):
+    df = df.copy()
+    # nlargest/nsmallest puis tri croissant pour un barh lisible (plus fort en haut)
+    df = (df.nsmallest(15, "TotalDeaths") if ascending else df.nlargest(15, "TotalDeaths"))
+    df = df.sort_values("TotalDeaths")
+    df["label"] = df["TotalDeaths"].apply(fmt_deaths)
+    fig = px.bar(
+        df, x="TotalDeaths", y="Entity",
         orientation="h",
         text="label",
         color="TotalDeaths",
         color_continuous_scale=SEQUENTIAL_SCALE,
         custom_data=["label"],
-        labels={"TotalDeaths": "Décès totaux", "Entity": ""},
-        title=f"Top 15 pays ({year_std})",
+        labels={"TotalDeaths": "Nombre total de décès", "Entity": ""},
+        title=title,
     )
-    fig_bar.update_traces(
+    fig.update_traces(
         textposition="outside",
-        hovertemplate="<b>%{y}</b><br>%{customdata[0]} décès<extra></extra>"
+        hovertemplate="<b>%{y}</b><br>%{customdata[0]} décès<extra></extra>",
     )
-    style(
-        fig_bar,
-        height=420,
-        showlegend=False,
-        coloraxis_showscale=False,
-        margin=dict(t=40, b=0, l=0, r=60),
-    )
-    st.plotly_chart(fig_bar, use_container_width=True)
+    style(fig, height=460, showlegend=False, coloraxis_showscale=False,
+          margin=dict(t=40, b=0, l=0, r=60))
+    return fig
+
+
+col_high, col_low = st.columns(2)
+with col_high:
+    st.plotly_chart(rank_bar(rank_df, f"Top 15 — plus de décès ({year_std})", ascending=False),
+                    use_container_width=True)
+with col_low:
+    st.plotly_chart(rank_bar(rank_df, f"Top 15 — moins de décès ({year_std})", ascending=True),
+                    use_container_width=True)
+
+st.caption(
+    "Classement par nombre total de décès cardiovasculaires (taux pour 100k × population). "
+    "Les pays « moins de décès » sont surtout des pays très peu peuplés."
+)
 
 st.divider()
 
@@ -160,7 +183,7 @@ st.subheader("Évolution du taux de mortalité : Hommes vs Femmes")
 selected = st.multiselect(
     "Pays",
     options=sorted(gender_df["Entity"].unique()),
-    default=["France", "United States", "Russia", "Brazil", "Germany"]
+    default=["France", "United States", "Russia", "Germany"]
 )
 
 if selected:

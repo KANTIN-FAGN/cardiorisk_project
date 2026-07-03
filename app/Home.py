@@ -38,6 +38,33 @@ Ce projet explore les facteurs de risque à deux niveaux :
 
 st.divider()
 
+# ── Navigation rapide ─────────────────────────────────────────────────────────
+
+st.subheader("Que souhaitez-vous faire ?")
+
+nav_cards = [
+    ("🌍", "Analyse mondiale", "Mortalité cardiovasculaire par pays, richesse et sexe.", "pages/1_Analyse_globale.py", "#eff6ff"),
+    ("🔬", "Analyse patients", "Explorer les facteurs de risque sur deux cohortes.", "pages/2_Analyse_patients.py", "#f0fdf4"),
+    ("🤖", "Modélisation", "Comparaison des modèles de Machine Learning.", "pages/3_Modelisation.py", "#faf5ff"),
+    ("🩺", "Prédiction", "Estimer un risque cardiovasculaire individuel.", "pages/4_Prediction.py", "#fff7ed"),
+]
+
+cols = st.columns(4)
+for col, (icon, title, desc, page, bg) in zip(cols, nav_cards):
+    with col:
+        with st.container(border=True):
+            st.markdown(
+                f"<div style='font-size:1.8rem;background:{bg};width:2.8rem;height:2.8rem;"
+                f"display:flex;align-items:center;justify-content:center;border-radius:12px;"
+                f"margin-bottom:0.5rem'>{icon}</div>"
+                f"<div style='font-weight:600;font-size:1.02rem;margin-bottom:0.2rem'>{title}</div>"
+                f"<div style='color:#6b7280;font-size:0.85rem;min-height:2.6rem'>{desc}</div>",
+                unsafe_allow_html=True,
+            )
+            st.page_link(page, label="Accéder →")
+
+st.divider()
+
 # ── Datasets ──────────────────────────────────────────────────────────────────
 
 st.subheader("Les données utilisées")
@@ -152,7 +179,7 @@ with col2:
 **2. Comprendre**
 
 Identifier quelles variables sont statistiquement associées
-au risque cardiovasculaire (tests Chi², Mann-Whitney).
+au risque cardiovasculaire.
 """)
 
 with col3:

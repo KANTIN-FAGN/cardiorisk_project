@@ -12,6 +12,7 @@ import streamlit as st
 sys.path.append(str(Path(__file__).parent.parent))
 sys.path.append(str(Path(__file__).parent.parent.parent))
 from components.cards import load_css
+from components.theme import risk_gauge
 from src.feature_engineering import add_bmi_category, add_bp_category, add_unhealthy_days, bmi_category, bp_category
 from src.predict import load_bundle, pick_example_profiles, predict_risk
 
@@ -176,25 +177,49 @@ def brfss_risk_factors(row):
     return factors, recos
 
 
-def show_result(proba, true_label=None, factors=None, recos=None):
-    if proba >= 0.5:
-        level, icon = "Risque élevé", "🔴"
-    elif proba >= 0.25:
-        level, icon = "Risque modéré", "🟡"
+def bmi_badge(bmi):
+    """Affiche l'IMC calculé avec une pastille de catégorie colorée (façon mockup)."""
+    if bmi < 18.5:
+        label, color = "Insuffisance", "#f59e0b"
+    elif bmi < 25:
+        label, color = "Normal", "#059669"
+    elif bmi < 30:
+        label, color = "Surpoids", "#f59e0b"
     else:
-        level, icon = "Risque faible", "🟢"
+        label, color = "Obésité", "#e11d48"
+    st.markdown(
+        f"<div style='margin:-0.3rem 0 0.4rem'>"
+        f"<span style='color:#6b7280;font-size:0.8rem'>IMC calculé</span> "
+        f"<span style='font-size:1.3rem;font-weight:700'>{bmi:.1f}</span> "
+        f"<span style='background:{color}22;color:{color};font-size:0.75rem;font-weight:600;"
+        f"padding:0.15rem 0.55rem;border-radius:999px;margin-left:0.4rem'>{label}</span></div>",
+        unsafe_allow_html=True,
+    )
 
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.metric("Risque estimé", f"{proba * 100:.0f}%")
-    with col2:
-        st.progress(min(max(proba, 0.0), 1.0))
-        st.markdown(f"{icon} **{level}**")
-    if true_label is not None:
-        st.caption(
-            f"Profil réel (tiré du dataset) : **{true_label}** — utile pour tester le modèle, "
-            "mais ce profil a pu faire partie des données d'entraînement."
+
+def show_result(proba, true_label=None, factors=None, recos=None):
+    fig, level, color = risk_gauge(proba)
+
+    col_g, col_t = st.columns([1, 1])
+    with col_g:
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    with col_t:
+        st.markdown(f"### Votre résultat")
+        st.markdown(
+            f"<div style='font-size:1.4rem;font-weight:600;color:{color};margin-bottom:0.3rem'>{level}</div>",
+            unsafe_allow_html=True,
         )
+        if proba >= 0.5:
+            st.markdown("Votre risque cardiovasculaire estimé est **élevé**.")
+        elif proba >= 0.25:
+            st.markdown("Votre risque cardiovasculaire estimé est **modéré**.")
+        else:
+            st.markdown("Votre risque cardiovasculaire estimé est **faible**.")
+        if true_label is not None:
+            st.caption(
+                f"Profil réel (dataset) : **{true_label}** — utile pour tester le modèle, "
+                "mais ce profil a pu faire partie des données d'entraînement."
+            )
 
     col_f, col_r = st.columns(2)
     with col_f:
@@ -254,7 +279,7 @@ with tab1:
         height = c4.number_input("Taille (cm)", 100, 250, int(profile.get("height", 165)))
         weight = c5.number_input("Poids (kg)", 28, 200, int(profile.get("weight", 70)))
         bmi = weight / (height / 100) ** 2
-        st.caption(f"IMC calculé : **{bmi:.1f}**")
+        bmi_badge(bmi)
 
         c6, c7 = st.columns(2)
         ap_hi = c6.slider("Pression systolique (mmHg)", 60, 240, int(profile.get("ap_hi", 120)))
