@@ -42,3 +42,52 @@ def fmt_p(p):
 
 def sig_label(p, threshold=0.05):
     return "✅ Significatif" if p < threshold else "❌ Non significatif"
+
+
+# Paliers de risque partagés (gauge + libellés)
+RISK_LOW = "#059669"    # vert  — < 25%
+RISK_MID = "#f59e0b"    # ambre — 25–50%
+RISK_HIGH = "#e11d48"   # rouge — >= 50%
+
+
+def risk_level(proba):
+    """(libellé, couleur) selon la probabilité de risque."""
+    if proba >= 0.5:
+        return "Risque élevé", RISK_HIGH
+    if proba >= 0.25:
+        return "Risque modéré", RISK_MID
+    return "Risque faible", RISK_LOW
+
+
+def risk_gauge(proba, height=260):
+    """Compteur (jauge) de risque type mockup CardioPred, façon speedomètre coloré."""
+    import plotly.graph_objects as go
+
+    pct = proba * 100
+    label, color = risk_level(proba)
+
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=pct,
+        number={"suffix": "%", "font": {"size": 40, "color": color}},
+        gauge={
+            "axis": {"range": [0, 100], "tickwidth": 1, "tickcolor": COLORS["grid"],
+                     "tickvals": [0, 25, 50, 75, 100]},
+            "bar": {"color": color, "thickness": 0.28},
+            "bgcolor": COLORS["bg"],
+            "borderwidth": 0,
+            "steps": [
+                {"range": [0, 25], "color": "#ecfdf5"},
+                {"range": [25, 50], "color": "#fffbeb"},
+                {"range": [50, 100], "color": "#fef2f2"},
+            ],
+            "threshold": {"line": {"color": color, "width": 4}, "thickness": 0.8, "value": pct},
+        },
+    ))
+    fig.update_layout(
+        height=height,
+        margin=dict(t=10, b=0, l=20, r=20),
+        paper_bgcolor=COLORS["bg"],
+        font=dict(family="-apple-system, Segoe UI, Roboto, sans-serif"),
+    )
+    return fig, label, color

@@ -34,7 +34,7 @@ st.divider()
 st.subheader("Méthodologie")
 st.markdown("""
 1. **Nettoyage** — suppression des doublons et valeurs aberrantes (tension artérielle incohérente, IMC hors bornes physiologiques), encodage des variables catégorielles.
-2. **Exploration** — analyse univariée et bivariée, tests statistiques (Chi², Mann-Whitney) pour valider l'association entre chaque facteur et le risque cardiovasculaire (page *Analyse des patients*).
+2. **Exploration** — analyse univariée et bivariée, tests statistiques (Chi²) pour valider l'association entre chaque facteur et le risque cardiovasculaire (page *Analyse des patients*).
 3. **Modélisation** — 4 algorithmes entraînés et comparés par dataset (Logistic Regression, Random Forest, XGBoost, LightGBM), avec gestion du déséquilibre des classes (`class_weight`/`scale_pos_weight`). Robustesse vérifiée par **validation croisée 5-fold stratifiée** sur le jeu d'entraînement, évaluation finale sur un holdout de 20% jamais vu. Sélection du meilleur modèle par **ROC-AUC**, plus robuste que l'accuracy face au déséquilibre du dataset BRFSS.
 4. **Application** — restitution interactive des analyses et des modèles sous forme de dashboard Streamlit (carte mondiale, exploration patients, comparaison de modèles, simulateur de prédiction).
 """)
@@ -92,7 +92,6 @@ st.subheader("Biais possibles")
 st.markdown("""
 - **Biais géographique** : le dataset Cardio Train (Russie) et le BRFSS (USA) ne représentent pas la diversité mondiale des populations.
 - **Biais déclaratif** : le tabac, l'alcool ou l'activité physique sont auto-déclarés dans le BRFSS, avec un risque de sous-déclaration.
-- **Biais temporel** : les données mondiales et patients ne couvrent pas exactement les mêmes périodes.
 """)
 
 st.divider()
@@ -100,9 +99,7 @@ st.divider()
 st.subheader("Améliorations futures")
 st.markdown("""
 - Valider les modèles sur une cohorte externe pour mesurer la généralisation.
-- Ajouter un intervalle de confiance ou une validation croisée aux métriques de performance.
 - Enrichir les données mondiales avec des facteurs socio-économiques supplémentaires (accès aux soins, pollution).
-- Explorer des variables dérivées (feature engineering) pour affiner la prédiction lifestyle.
 """)
 
 st.divider()
